@@ -1,3 +1,4 @@
+# Imports and City, Bus station cordinats
 import json
 import sqlite3
 import requests
@@ -10,20 +11,20 @@ BASE_URL = "https://api.tfl.gov.uk/StopPoint/"
 STP_CNT = {"Waterloo Station": "490008660N", "Oxford Circus": "490000091W", 
            "Victoria Station": "490008660S", "King's Cross": "490000092K", "London Bridge": "490000093L"}
 
-           
+
+# API Call 
 data_ = []
 
 for stp in STP_CNT.values():
     resp = requests.get(f"{BASE_URL}{stp}/Arrivals").json()
     data_.append(resp)
 
-data_
 
-
+# Removing Exeptions from the list
 data1 = [pred_list for pred_list in data_ if isinstance(pred_list, list)]
-data1
 
 
+# Data Processing
 data = []
 peak_hrs = [7,8,9,10,16,17,18,19]
 
@@ -41,17 +42,11 @@ for pred_list in data1:
             dic["is_peak"] = 1 if h_t in peak_hrs else 0
             data.append(dic)
 
-data
 
-
+# DB Creation and Insert
 conn = sqlite3.connect(DB_PATH)
 cur = conn.cursor()
 
-# cur.execute(
-#     """
-#     DROP TABLE IF EXISTS bus_arrivals;
-#     """
-# )
 
 cur.execute(
     """
@@ -74,26 +69,25 @@ com_for_insert = """
     """
 
 cur.executemany(com_for_insert, data)
-
 conn.commit()
-conn.close()
 
 
-conn = sqlite3.connect(DB_PATH)
+# Data Reading with Pandas
 df = pd.read_sql("""SELECT * FROM bus_arrivals""", conn)
 conn.close()
 
-df
+
+# Creating New Column
+(df["wait_time_min"] = df["time_to_station"] // 60
 
 
-df["wait_time_min"] = df["time_to_station"] // 60
+# Question 1
+print(df.groupby("stop_name")["is_peak"].sum().idxmax())
 
-df
+
+# Question 2
+print(df.groupby("stop_name")["time_to_station"].mean().idxmax())
 
 
-df.groupby("stop_name")["is_peak"].sum().idxmax()
-
-df.groupby("stop_name")["time_to_station"].mean().idxmax()
-
-df["wait_time_min"].mean()
-
+# Question 3
+print(df["wait_time_min"].mean())
